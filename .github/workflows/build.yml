@@ -1,0 +1,42 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: host unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -C test
+
+  firmware:
+    name: firmware (${{ matrix.board }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        board: [pico, pico_w]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Initialise TinyUSB inside the Pico SDK
+        run: git -C lib/pico-sdk submodule update --init lib/tinyusb
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib \
+            build-essential libusb-1.0-0-dev
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DPICO_BOARD=${{ matrix.board }}
+      - name: Build
+        run: cmake --build build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spacepilot_bridge-${{ matrix.board }}
+          path: |
+            build/spacepilot_bridge.uf2
+            build/spacepilot_bridge.elf

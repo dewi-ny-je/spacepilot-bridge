@@ -1,0 +1,12 @@
+build/
+build-*/
+test/test_bridge
+*.o
+*.uf2
+*.elf
+*.bin
+*.hex
+*.map
+*.dis
+.vscode/
+.idea/
