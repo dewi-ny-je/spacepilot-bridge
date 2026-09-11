@@ -51,9 +51,12 @@ does not.
 
 **Research and private experimentation only — no commercial redistribution.**
 What this repository contains is a compatibility finding and the apparatus used
-to obtain it, not a product, and it should not be treated as one: please do not
-sell it, or hardware running it.  Besides being the author's wish, there are
-concrete reasons:
+to obtain it, not a product, and it should not be treated as one.  This is a
+condition of the licence rather than a preference: the repository is published
+under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0),
+which permits any noncommercial use — personal, research, teaching, charitable
+— and does not permit commercial use.  Beyond the licence, there are concrete
+reasons why the line is drawn here:
 
 * The identity the firmware presents is the *variable under test*.  To learn
   whether a current driver accepts the translated reports at all, the device
@@ -251,10 +254,14 @@ value is written out in [docs/PROTOCOL.md](docs/PROTOCOL.md) with a pointer to
 where it came from.  The SDK and Pico-PIO-USB submodules carry their own
 licenses.
 
-This repository's own source is under the Apache License 2.0 (see `LICENSE`).
-That licence is permissive, so the personal-use request in
-[Scope and intent](#scope-and-intent) is the author's intent and not an extra
-licence condition — read that section for why it is worth honouring anyway.
+This repository's own source is under the
+[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)
+(see `LICENSE`): any noncommercial use is permitted — personal, research,
+teaching, charitable — and commercial use is not.  That makes the boundary
+described in [Scope and intent](#scope-and-intent) a licence condition rather
+than a request.  It is deliberately more restrictive than the licences of the
+open-source projects listed above, so code from here cannot be contributed back
+to them.
 
 ## Layout
 
