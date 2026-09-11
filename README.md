@@ -21,6 +21,42 @@ RP2040-Zero**.  The other USB devices from
 too, but none of them has been tried — see [Testing status](#testing-status)
 if you own one.
 
+## Scope and intent
+
+This project exists to explore **how much the 3Dconnexion 6DOF devices have in
+common**, and to keep one old device working as a side effect.  Two decades
+separate the Logitech-branded SpacePilot from today's SpaceMouse Enterprise,
+yet they share a single protocol lineage: the same HID report layout, the same
+±350 logical axis range, the same key numbering with gaps left where a model
+has fewer keys, the same LED output report.  Once that is written down
+([docs/PROTOCOL.md](docs/PROTOCOL.md)), making an old device speak as a current
+one turns out to be mostly a table — the differences reduce to two per-device
+columns, axis convention and key numbering, both of which can be read straight
+out of spacenavd's own device table.  The 21-device list below is really the
+result of the exercise: it is a map of where the family agrees and where it
+does not.
+
+**For personal use only — no commercial redistribution.**  This is a hobby
+project for making hardware you already own useful again.  Please do not sell
+it, or hardware running it.  Besides being the author's wish, there are
+concrete reasons:
+
+* To be accepted by the stock drivers, the firmware deliberately identifies
+  itself with 3Dconnexion's USB vendor ID (`0x256f`) and the product ID of a
+  real product.  USB vendor IDs are assigned to their owner; building such a
+  device for yourself is a very different matter from putting one on the
+  market, and the same goes for the product names in the USB string
+  descriptors.
+* The whole approach works by impersonating a commercial product to that
+  product's own driver.  That is a reasonable thing to do to your own desk; it
+  is not a basis for a product.
+* [AndunHH/spacemouse](https://github.com/AndunHH/spacemouse), one of the
+  projects this one draws its knowledge of the SpaceMouse Pro Wireless from,
+  is published under CC BY-NC-SA 4.0 — explicitly non-commercial.
+
+If you want to ship hardware, get your own USB vendor ID and write your own
+report descriptor.
+
 ## What it does
 
 | Feature | Notes |
@@ -182,9 +218,16 @@ you find can be reproduced in `test/test_bridge.c` without hardware.
   host on a [Pico-PIO-USB](https://github.com/sekigon-gonnoc/Pico-PIO-USB)
   port, binary copied to RAM) follows [HID Remapper](https://github.com/jfedor2/hid-remapper).
 
-No code was copied from those projects; this repository is licensed under the
-Apache License 2.0 (see `LICENSE`).  The SDK and Pico-PIO-USB submodules carry
-their own licenses.
+No code was copied from those projects: what was taken is protocol knowledge —
+USB IDs, report layouts, bit numbers — which is why the reasoning behind every
+value is written out in [docs/PROTOCOL.md](docs/PROTOCOL.md) with a pointer to
+where it came from.  The SDK and Pico-PIO-USB submodules carry their own
+licenses.
+
+This repository's own source is under the Apache License 2.0 (see `LICENSE`).
+That licence is permissive, so the personal-use request in
+[Scope and intent](#scope-and-intent) is the author's intent and not an extra
+licence condition — read that section for why it is worth honouring anyway.
 
 ## Layout
 
