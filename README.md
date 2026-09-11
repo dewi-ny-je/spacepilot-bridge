@@ -1,8 +1,13 @@
 # spacepilot-bridge
 
-Firmware for a Raspberry Pi Pico (RP2040) that sits between an old 3Dconnexion
-**SpacePilot** and a computer, and makes the computer see a **SpaceMouse Pro
-Wireless**.
+An interoperability study: **to what extent is a twenty-year-old 3Dconnexion
+6DOF device still protocol-compatible with what current driver software
+expects?**
+
+The experiment takes the form of firmware for an RP2040 board, which sits
+between an old **SpacePilot** and a computer and re-expresses the old device's
+input reports in the format used by a current **SpaceMouse Pro Wireless**, so
+that the degree of compatibility can actually be measured.
 
 ```
  SpacePilot  ──USB──▶  Raspberry Pi Pico  ──USB──▶  computer
@@ -10,16 +15,24 @@ Wireless**.
                        GPIO0/1 + native USB       "SpaceMouse Pro Wireless (cabled)"
 ```
 
-Why: 3Dconnexion dropped the SpacePilot family from 3DxWare years ago, and the
-old devices also split their reports differently from current ones.  The bridge
-speaks the old protocol on one side and the current one on the other, so the
-current drivers (3DxWare on Windows/macOS, spacenavd on Linux) just work.
+**The question.**  3Dconnexion's 6DOF devices span two decades and more than
+one protocol generation; the older models were dropped from the current driver
+software some years ago, and they also divide their input reports differently
+from current ones.  Is that gap fundamental, or does it come down to a handful
+of report-layout details?  The only way to find out is to build the translation
+and see how far it gets: the firmware converts between the two generations'
+report formats, and the experiment is then to observe whether current drivers
+(3DxWare on Windows/macOS, spacenavd on Linux) accept the result and interpret
+it correctly.
 
-Status: **tested and working with a SpacePilot (046d:c625) on a Waveshare
-RP2040-Zero**.  The other USB devices from
-[spacenavd](https://github.com/FreeSpacenav/spacenavd)'s table are recognised
-too, but none of them has been tried — see [Testing status](#testing-status)
-if you own one.
+**The result so far.**  For the one device examined — a SpacePilot (046d:c625),
+on a Waveshare RP2040-Zero — the gap turns out to be small and entirely
+mechanical: the axes, the buttons and the LED all map across, and current
+drivers accept the translated reports.  The other USB devices in
+[spacenavd](https://github.com/FreeSpacenav/spacenavd)'s table are described by
+the same model but have not been examined — see
+[Testing status](#testing-status) if you own one and want to extend the
+comparison.
 
 ## Scope and intent
 
@@ -36,26 +49,38 @@ out of spacenavd's own device table.  The 21-device list below is really the
 result of the exercise: it is a map of where the family agrees and where it
 does not.
 
-**For personal use only — no commercial redistribution.**  This is a hobby
-project for making hardware you already own useful again.  Please do not sell
-it, or hardware running it.  Besides being the author's wish, there are
+**Research and private experimentation only — no commercial redistribution.**
+What this repository contains is a compatibility finding and the apparatus used
+to obtain it, not a product, and it should not be treated as one: please do not
+sell it, or hardware running it.  Besides being the author's wish, there are
 concrete reasons:
 
-* To be accepted by the stock drivers, the firmware deliberately identifies
-  itself with 3Dconnexion's USB vendor ID (`0x256f`) and the product ID of a
-  real product.  USB vendor IDs are assigned to their owner; building such a
-  device for yourself is a very different matter from putting one on the
-  market, and the same goes for the product names in the USB string
-  descriptors.
-* The whole approach works by impersonating a commercial product to that
-  product's own driver.  That is a reasonable thing to do to your own desk; it
-  is not a basis for a product.
+* The identity the firmware presents is the *variable under test*.  To learn
+  whether a current driver accepts the translated reports at all, the device
+  has to claim 3Dconnexion's USB vendor ID (`0x256f`), the product ID of a
+  current model and the matching product-name strings — there is no way to ask
+  the question otherwise.  USB vendor IDs are assigned to their owner;
+  reproducing the experiment on your own bench is one thing, putting such a
+  device in front of anyone else is quite another.
+* The method necessarily presents a current product's identity to that
+  product's own driver.  That is defensible as an interoperability
+  investigation on hardware you own; it is not a basis for a product.
 * [AndunHH/spacemouse](https://github.com/AndunHH/spacemouse), one of the
   projects this one draws its knowledge of the SpaceMouse Pro Wireless from,
   is published under CC BY-NC-SA 4.0 — explicitly non-commercial.
 
-If you want to ship hardware, get your own USB vendor ID and write your own
-report descriptor.
+Anyone wanting to build and ship hardware should obtain their own USB vendor ID
+and write their own report descriptor, at which point none of the identity
+choices made here apply to them anyway.
+
+**No affiliation.**  This project is independent and is not affiliated with,
+endorsed by, or connected to 3Dconnexion in any way.  "3Dconnexion",
+"SpacePilot", "SpaceMouse" and "3DxWare" are trademarks of their respective
+owner, used here only to identify the hardware and software under study.  No
+vendor software was decompiled and none is redistributed: every protocol detail
+recorded in [docs/PROTOCOL.md](docs/PROTOCOL.md) was derived from published
+open-source projects — spacenavd, AndunHH/spacemouse, 3dxdisp — or from
+observing the behaviour of a device the author owns.
 
 ## What it does
 
@@ -64,7 +89,7 @@ report descriptor.
 | 6 axes | Translation (report 1) and rotation (report 2) of the old device are merged into the single 6-axis report of the SpaceMouse Pro. |
 | Buttons | Mapped through a compile-time table (`src/button_maps.h`).  The SpacePilot has 21 keys, the SpaceMouse Pro has 15; keys with a counterpart on the SpaceMouse Pro are mapped to it by default, the rest are ignored until you map them. |
 | LED | The LED output report sent by the driver is forwarded to the source device. |
-| Identity | `256f:c631` "3Dconnexion SpaceMouse Pro Wireless (cabled)", the same identity the [AndunHH/spacemouse](https://github.com/AndunHH/spacemouse) project uses successfully with 3DxWare and spacenavd. |
+| Identity | `256f:c631` "3Dconnexion SpaceMouse Pro Wireless (cabled)" — the variable under test, and the same identity [AndunHH/spacemouse](https://github.com/AndunHH/spacemouse) reports as being accepted by 3DxWare and spacenavd. |
 | Source devices | All 21 USB devices in spacenavd's table (below).  Any other HID *multi-axis controller* is accepted with the generic V3DK button map.  Keyboards and mice plugged into the host port are ignored. |
 | Not done | The SpacePilot (Pro) LCD is not driven (it lives on a separate vendor-specific interface and is simply left alone).  No battery report, the device claims to be the cabled variant.  spacenavd's *serial* devices (Spaceball 1003/2003/3003/4000, Magellan SpaceMouse, serial CadMan) are RS-232, not USB, and are out of scope. |
 
@@ -178,13 +203,14 @@ Everything is compile time.
 
 ## Testing status
 
-**SpacePilot (046d:c625): tested, works** — enumeration, all six axes, the
-button table and driver acceptance have been verified on real hardware.
+**SpacePilot (046d:c625): examined, compatible** — enumeration, all six axes,
+the button table and driver acceptance were all confirmed on real hardware.
 
-**Every other device in the table: untested.**  Their entries are derived from
-spacenavd's source code, not from a device on a desk, so they need feedback
-from actual users.  If you own one, this is what to check, in order, and what
-to report (an issue with the UART log and the device name is ideal):
+**Every other device in the table: not examined.**  Their entries are predicted
+from spacenavd's source code rather than observed on hardware, so confirming or
+refuting them needs reports from people who own those devices.  If you own one,
+this is what to measure, in order, and what to report (an issue with the UART
+log and the device name is ideal):
 
 1. **Enumeration on the host port.**  Set `BRIDGE_DEBUG` to 1 (default) and
    watch the UART on GPIO12/13 at 115200 baud.  You should see
@@ -198,7 +224,8 @@ to report (an issue with the UART log and the device name is ideal):
    devices the numbering is well established; for the "sequential" ones the
    physical key order is a guess, so expect to reorder `map_sequential` (or
    give the device its own table).
-4. **Driver acceptance.**  3DxWare should list a "SpaceMouse Pro Wireless".
+4. **Driver acceptance.**  The driver under test should list a "SpaceMouse Pro
+   Wireless" — this is the actual measurement.
 
 The translation logic is deliberately decoupled from TinyUSB so that anything
 you find can be reproduced in `test/test_bridge.c` without hardware.

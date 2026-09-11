@@ -1,7 +1,11 @@
 # Protocol notes
 
-What the bridge translates between, and where each piece of information comes
-from.  All multi-byte values are little-endian.
+The findings of the compatibility study described in the
+[README](../README.md): what the bridge translates between, and where each
+piece of information comes from.  Every detail below was derived from published
+open-source projects or from observing a device the author owns; no vendor
+software was decompiled and none is reproduced here.  All multi-byte values are
+little-endian.
 
 ## Source: SpacePilot (046d:c625) and SpacePilot Pro (046d:c629)
 

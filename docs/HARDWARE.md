@@ -1,5 +1,8 @@
 # Hardware
 
+The apparatus, for anyone reproducing the compatibility study described in the
+[README](../README.md) on their own bench.
+
 ## Parts
 
 * An RP2040 board.  The bridge was developed and tested on a **Waveshare
