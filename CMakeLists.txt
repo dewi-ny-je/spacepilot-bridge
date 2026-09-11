@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.13)
 
-# Board: "pico" (default) or "pico_w".  RP2350 boards are untested.
-set(PICO_BOARD pico CACHE STRING "Board type")
+# Board: "waveshare_rp2040_zero" (default, the board the bridge was tested on),
+# "pico" or "pico_w".  RP2350 boards are untested.
+set(PICO_BOARD waveshare_rp2040_zero CACHE STRING "Board type")
 
 # Dependencies: environment variables win, git submodules under lib/ are the fallback.
 if (NOT DEFINED PICO_SDK_PATH AND NOT DEFINED ENV{PICO_SDK_PATH})

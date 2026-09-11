@@ -127,12 +127,15 @@
 #endif
 
 /* Debug UART (only used when BRIDGE_DEBUG > 0).  GPIO0/1 are taken by the
- * PIO USB host, so uart0 is moved to GPIO16/17. */
+ * PIO USB host, so uart0 is moved to GPIO12/13: the one remaining uart0 pair
+ * that is on the edge of both the Raspberry Pi Pico and the Waveshare
+ * RP2040-Zero (GPIO16/17 would be uart0 too, but on the RP2040-Zero GPIO16
+ * drives the RGB LED; GPIO28/29 are the ADC inputs). */
 #ifndef BRIDGE_UART_TX_PIN
-#define BRIDGE_UART_TX_PIN 16
+#define BRIDGE_UART_TX_PIN 12
 #endif
 #ifndef BRIDGE_UART_RX_PIN
-#define BRIDGE_UART_RX_PIN 17
+#define BRIDGE_UART_RX_PIN 13
 #endif
 #ifndef BRIDGE_UART_BAUD
 #define BRIDGE_UART_BAUD 115200

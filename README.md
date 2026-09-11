@@ -15,10 +15,11 @@ old devices also split their reports differently from current ones.  The bridge
 speaks the old protocol on one side and the current one on the other, so the
 current drivers (3DxWare on Windows/macOS, spacenavd on Linux) just work.
 
-Status: **tested and working with a SpacePilot (046d:c625)**.  The other USB
-devices from [spacenavd](https://github.com/FreeSpacenav/spacenavd)'s table are
-recognised too, but none of them has been tried — see
-[Testing status](#testing-status) if you own one.
+Status: **tested and working with a SpacePilot (046d:c625) on a Waveshare
+RP2040-Zero**.  The other USB devices from
+[spacenavd](https://github.com/FreeSpacenav/spacenavd)'s table are recognised
+too, but none of them has been tried — see [Testing status](#testing-status)
+if you own one.
 
 ## What it does
 
@@ -71,19 +72,22 @@ axes and keys come out right depends on feedback from people who own them.
 
 ## Hardware
 
-One Raspberry Pi Pico and a USB extension cable cut in half — the same build as
-the single-Pico [HID Remapper](https://github.com/jfedor2/hid-remapper/blob/master/HARDWARE.md):
+One RP2040 board and a USB extension cable cut in half — the same build as the
+single-Pico [HID Remapper](https://github.com/jfedor2/hid-remapper/blob/master/HARDWARE.md).
+The bridge was developed and tested on a **Waveshare RP2040-Zero**; a
+Raspberry Pi Pico (or Pico W) builds and is wired the same way but has not
+been tried.
 
-| Cable wire (female / device end) | Pico pin |
-| --- | --- |
-| D+ (green) | GPIO0 (pin 1) |
-| D- (white) | GPIO1 (pin 2) |
-| VBUS (red) | VBUS (pin 40) |
-| GND (black) | GND (pin 38) |
+| Cable wire (female / device end) | RP2040-Zero pad | Pico pin |
+| --- | --- | --- |
+| D+ (green) | GP0 | GPIO0 (pin 1) |
+| D- (white) | GP1 | GPIO1 (pin 2) |
+| VBUS (red) | 5V | VBUS (pin 40) |
+| GND (black) | GND | GND (pin 38) |
 
-The Pico's own micro-USB port goes to the computer.  See [docs/HARDWARE.md](docs/HARDWARE.md)
-for details, the debug UART and power considerations (the SpacePilot with its
-backlit LCD is not a low-power device).
+The board's own USB connector goes to the computer.  See [docs/HARDWARE.md](docs/HARDWARE.md)
+for details, the debug UART (GPIO12/13) and power considerations (the
+SpacePilot with its backlit LCD is not a low-power device).
 
 ## Building
 
@@ -96,7 +100,8 @@ cd spacepilot-bridge
 git submodule update --init                      # pico-sdk + Pico-PIO-USB
 git -C lib/pico-sdk submodule update --init lib/tinyusb
 
-cmake -S . -B build -DPICO_BOARD=pico            # or pico_w
+cmake -S . -B build                              # Waveshare RP2040-Zero (default)
+cmake -S . -B build -DPICO_BOARD=pico            # or: pico, pico_w
 cmake --build build
 # -> build/spacepilot_bridge.uf2
 ```
@@ -105,8 +110,9 @@ An existing SDK checkout can be used instead of the submodule by setting
 `PICO_SDK_PATH` (and `PICO_PIO_USB_PATH`) in the environment.  The first build
 also compiles `picotool` from the SDK to produce the UF2.
 
-Flash it the usual way: hold BOOTSEL while plugging the Pico into the computer,
-then copy `spacepilot_bridge.uf2` onto the `RPI-RP2` drive.
+Flash it the usual way: hold the BOOT button while plugging the board into the
+computer (BOOTSEL on a Pico), then copy `spacepilot_bridge.uf2` onto the
+`RPI-RP2` drive that appears.
 
 Run the unit tests of the translation core on the host with:
 
@@ -145,7 +151,7 @@ from actual users.  If you own one, this is what to check, in order, and what
 to report (an issue with the UART log and the device name is ideal):
 
 1. **Enumeration on the host port.**  Set `BRIDGE_DEBUG` to 1 (default) and
-   watch the UART on GPIO16/17 at 115200 baud.  You should see
+   watch the UART on GPIO12/13 at 115200 baud.  You should see
    `source attached: <device name> [vid:pid]`.
 2. **Axes.**  With `BRIDGE_DEBUG=2` every raw report is printed.  If an axis
    feels swapped or inverted, the device's `BRIDGE_SRC_FIX_YZ` flag in
