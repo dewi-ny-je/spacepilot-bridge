@@ -41,9 +41,11 @@ static const uint8_t axis_map[BRIDGE_NUM_AXES] = BRIDGE_AXIS_MAP;
 static const uint8_t axis_invert[BRIDGE_NUM_AXES] = BRIDGE_AXIS_INVERT;
 static const int16_t axis_scale[BRIDGE_NUM_AXES] = BRIDGE_AXIS_SCALE_PERCENT;
 
+#define SRC_BUTTON_BYTES (BRIDGE_MAX_SRC_BUTTONS / 8)
+
 static struct {
     const bridge_source_desc_t *src;
-    uint8_t btn_lut[32];          /* source bit -> destination bit / SMP_NONE */
+    uint8_t btn_lut[BRIDGE_MAX_SRC_BUTTONS]; /* source bit -> destination bit / SMP_NONE */
 
     int16_t axes[BRIDGE_NUM_AXES];
     bool axes_dirty;
@@ -52,7 +54,7 @@ static struct {
     uint32_t last_axes_sent_ms;
     uint8_t zeros_sent;           /* consecutive all-zero reports sent */
 
-    uint32_t src_buttons_raw;
+    uint8_t src_buttons[SRC_BUTTON_BYTES]; /* raw, as last reported */
     uint32_t buttons;             /* mapped, current */
     uint32_t buttons_sent;        /* mapped, last delivered to the computer */
 
@@ -79,7 +81,7 @@ static void build_button_lut(const bridge_source_desc_t *d)
 {
     memset(st.btn_lut, SMP_NONE, sizeof(st.btn_lut));
     for (size_t i = 0; i < d->map_len; i++) {
-        if (d->map[i].src < 32 && d->map[i].dst < 32) {
+        if (d->map[i].src < BRIDGE_MAX_SRC_BUTTONS && d->map[i].dst < 32) {
             st.btn_lut[d->map[i].src] = d->map[i].dst;
         }
     }
@@ -102,7 +104,7 @@ static void reset_motion_state(void)
     /* both halves "present" so the zero frame is flushed without waiting */
     st.got_trans = st.got_rot = true;
     st.zeros_sent = 0;
-    st.src_buttons_raw = 0;
+    memset(st.src_buttons, 0, sizeof(st.src_buttons));
     st.buttons = 0;
 }
 
@@ -152,9 +154,8 @@ const char *bridge_source_name(void)
 
 /* ------------------------------------------------------------------------- */
 
-static int16_t process_axis(uint8_t axis, int16_t raw)
+static int16_t process_axis(uint8_t axis, int32_t v)
 {
-    int32_t v = raw;
 #if BRIDGE_AXIS_DEADZONE > 0
     if (v > -BRIDGE_AXIS_DEADZONE && v < BRIDGE_AXIS_DEADZONE) {
         v = 0;
@@ -175,11 +176,24 @@ static int16_t process_axis(uint8_t axis, int16_t raw)
 /* p points at `count` int16 LE values for source axes first..first+count-1 */
 static void update_axes(const uint8_t *p, int first, int count)
 {
+    /* spacenavd's DF_SWAPYZ: Y<->Z, Ry<->Rz.  Stays within the translation and
+     * rotation triples, so a half report never spills into the other half. */
+    static const uint8_t swap_yz[BRIDGE_NUM_AXES] = { 0, 2, 1, 3, 5, 4 };
+    const bool fix_yz = (st.src->flags & BRIDGE_SRC_FIX_YZ) != 0;
     bool changed = false;
 
     for (int i = 0; i < count; i++) {
         int src_axis = first + i;
-        int16_t raw = (int16_t) ((uint16_t) p[2 * i] | ((uint16_t) p[2 * i + 1] << 8));
+        int32_t raw = (int16_t) ((uint16_t) p[2 * i] | ((uint16_t) p[2 * i + 1] << 8));
+
+        /* per-device normalisation (see BRIDGE_SRC_FIX_YZ) ... */
+        if (fix_yz) {
+            src_axis = swap_yz[src_axis];
+            if (src_axis != BRIDGE_AXIS_X && src_axis != BRIDGE_AXIS_RX) {
+                raw = -raw; /* spacenavd's DF_INVYZ */
+            }
+        }
+        /* ... then the user's own preference from config.h */
         uint8_t dst = axis_map[src_axis];
         if (dst >= BRIDGE_NUM_AXES) {
             continue; /* axis dropped by configuration */
@@ -200,33 +214,32 @@ static void update_axes(const uint8_t *p, int first, int count)
 
 static void update_buttons(const uint8_t *p, uint16_t n)
 {
-    uint32_t raw = 0;
-    if (n > 4) {
-        n = 4;
-    }
-    for (uint16_t i = 0; i < n; i++) {
-        raw |= (uint32_t) p[i] << (8 * i);
-    }
+    uint8_t raw[SRC_BUTTON_BYTES] = { 0 };
+    memcpy(raw, p, n < sizeof(raw) ? n : sizeof(raw));
 
-    if (raw != st.src_buttons_raw) {
-#if BRIDGE_DEBUG >= 1
-        printf("bridge: source buttons 0x%08lx:", (unsigned long) raw);
-        for (int bit = 0; bit < 32; bit++) {
-            if (raw & (1u << bit)) {
-                printf(" %d%s", bit, st.btn_lut[bit] == SMP_NONE ? "(unmapped)" : "");
-            }
-        }
-        printf("\n");
-#endif
-        st.src_buttons_raw = raw;
+    if (memcmp(raw, st.src_buttons, sizeof(raw)) == 0) {
+        return; /* no change, nothing to remap */
     }
+    memcpy(st.src_buttons, raw, sizeof(raw));
 
     uint32_t mapped = 0;
-    for (int bit = 0; bit < 32; bit++) {
-        if ((raw & (1u << bit)) && st.btn_lut[bit] != SMP_NONE) {
-            mapped |= 1u << st.btn_lut[bit];
+    LOG("bridge: source buttons:");
+    for (int byte = 0; byte < SRC_BUTTON_BYTES; byte++) {
+        if (raw[byte] == 0) {
+            continue;
+        }
+        for (int k = 0; k < 8; k++) {
+            if (raw[byte] & (1u << k)) {
+                int bit = byte * 8 + k;
+                uint8_t dst = st.btn_lut[bit];
+                LOG(" %d%s", bit, dst == SMP_NONE ? "(unmapped)" : "");
+                if (dst != SMP_NONE) {
+                    mapped |= 1u << dst;
+                }
+            }
         }
     }
+    LOG("\n");
     st.buttons = mapped;
 }
 

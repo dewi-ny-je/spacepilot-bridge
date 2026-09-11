@@ -42,6 +42,14 @@
 #define BRIDGE_ACCEPT_UNKNOWN_SOURCES 1
 #endif
 
+/* Size of the source button bitmask, in bits.  The SpaceMouse Enterprise puts
+ * its "Tab" and "Space" keys on bits 174 and 175, which is the widest button
+ * report in the family; anything above this is ignored.  Costs one byte of RAM
+ * per bit (lookup table plus current state). */
+#ifndef BRIDGE_MAX_SRC_BUTTONS
+#define BRIDGE_MAX_SRC_BUTTONS 192
+#endif
+
 /* ------------------------------------------------------------------------- */
 /* Report timing                                                             */
 /* ------------------------------------------------------------------------- */
@@ -73,11 +81,14 @@
 
 /* Order: X, Y, Z, Rx, Ry, Rz.
  *
- * BRIDGE_AXIS_MAP: for each axis *as reported by the source device*, the
- * output axis it is written to (0..5, or 0xFF to drop it).  spacenavd treats
- * the SpacePilot (Pro) and the SpaceMouse Pro Wireless with the same axis
- * flags (DF_SWAPYZ | DF_INVYZ), i.e. both share the same convention, so the
- * default is the identity mapping. */
+ * These are applied *after* the per-device normalisation that the
+ * BRIDGE_SRC_FIX_YZ flag in button_maps.h performs, so they are your own
+ * preference rather than a per-device correction.
+ *
+ * BRIDGE_AXIS_MAP: for each normalised source axis, the output axis it is
+ * written to (0..5, or 0xFF to drop it).  Most 3Dconnexion devices, the
+ * SpacePilot (Pro) and the emulated SpaceMouse Pro Wireless among them, share
+ * one convention, so the default is the identity mapping. */
 #ifndef BRIDGE_AXIS_MAP
 #define BRIDGE_AXIS_MAP { 0, 1, 2, 3, 4, 5 }
 #endif

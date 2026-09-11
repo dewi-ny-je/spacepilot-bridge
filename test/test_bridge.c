@@ -448,9 +448,114 @@ static void test_short_and_unknown_reports_are_ignored(void)
     CHECK(num_sent == 0);
 }
 
+static void test_every_spacenavd_usb_device_attaches(void)
+{
+    printf("test_every_spacenavd_usb_device_attaches\n");
+    static const uint16_t ids[][2] = {
+        { 0x046d, 0xc603 }, { 0x046d, 0xc605 }, { 0x046d, 0xc606 }, { 0x046d, 0xc621 },
+        { 0x046d, 0xc623 }, { 0x046d, 0xc625 }, { 0x046d, 0xc626 }, { 0x046d, 0xc627 },
+        { 0x046d, 0xc628 }, { 0x046d, 0xc629 }, { 0x046d, 0xc62b }, { 0x046d, 0xc640 },
+        { 0x256f, 0xc62e }, { 0x256f, 0xc62f }, { 0x256f, 0xc631 }, { 0x256f, 0xc632 },
+        { 0x256f, 0xc633 }, { 0x256f, 0xc635 }, { 0x256f, 0xc636 }, { 0x256f, 0xc638 },
+        { 0x256f, 0xc63a },
+    };
+    reset();
+    for (size_t i = 0; i < sizeof(ids) / sizeof(ids[0]); i++) {
+        CHECK(bridge_source_attach(ids[i][0], ids[i][1]));
+        CHECK(bridge_source_name() != NULL);
+        CHECK(strncmp(bridge_source_name(), "unknown", 7) != 0); /* found in the table */
+    }
+}
+
+static void test_fix_yz_axes(void)
+{
+    printf("test_fix_yz_axes\n");
+    reset();
+    /* SpaceMouse Classic: one of the three devices spacenavd leaves un-normalised */
+    uint32_t t = attach_and_settle(0x046d, 0xc606);
+
+    src_trans(1, 2, 3, t);
+    src_rot(4, 5, 6, t);
+    bridge_task(t);
+    CHECK(num_sent == 1);
+    /* swap Y<->Z, Ry<->Rz, then negate Y, Z, Ry, Rz */
+    CHECK(get16(sent[0].data + 0) == 1);
+    CHECK(get16(sent[0].data + 2) == -3);
+    CHECK(get16(sent[0].data + 4) == -2);
+    CHECK(get16(sent[0].data + 6) == 4);
+    CHECK(get16(sent[0].data + 8) == -6);
+    CHECK(get16(sent[0].data + 10) == -5);
+
+    /* a device without the flag passes straight through */
+    reset();
+    t = attach_and_settle(0x046d, 0xc626);
+    src_trans(1, 2, 3, t);
+    src_rot(4, 5, 6, t);
+    bridge_task(t);
+    CHECK(num_sent == 1);
+    for (int k = 0; k < 6; k++) {
+        CHECK(get16(sent[0].data + 2 * k) == k + 1);
+    }
+}
+
+static void test_sequential_map(void)
+{
+    printf("test_sequential_map\n");
+    reset();
+    /* SpaceNavigator: two keys, bits 0 and 1, which are Menu and Fit */
+    uint32_t t = attach_and_settle(0x046d, 0xc626);
+    src_buttons(0x3, 1, t);
+    bridge_task(t);
+    CHECK(num_sent == 1);
+    CHECK(buttons_of(&sent[0]) == ((1u << SMP_MENU) | (1u << SMP_FIT)));
+
+    /* SpaceExplorer: 15 contiguous keys; the 15th lands on the 15th
+     * SpaceMouse Pro key, a 16th would have nowhere to go */
+    reset();
+    t = attach_and_settle(0x046d, 0xc627);
+    src_buttons((1u << 14) | (1u << 15), 2, t);
+    bridge_task(t);
+    CHECK(num_sent == 1);
+    CHECK(buttons_of(&sent[0]) == (1u << SMP_ROT));
+}
+
+static void test_enterprise_wide_button_report(void)
+{
+    printf("test_enterprise_wide_button_report\n");
+    reset();
+    uint32_t t = attach_and_settle(0x256f, 0xc633);
+
+    /* 22-byte report 3: "Space" is bit 175 (unmapped by default) */
+    uint8_t r[23] = { 3 };
+    r[1 + 175 / 8] = (uint8_t) (1u << (175 % 8));
+    bridge_source_report(r, sizeof(r), t);
+    bridge_task(t);
+    CHECK(num_sent == 0);
+
+    /* add "Menu" (bit 0): only that one reaches the computer */
+    r[1] = 1u << V3DK_MENU;
+    bridge_source_report(r, sizeof(r), t + 1);
+    bridge_task(t + 1);
+    CHECK(num_sent == 1);
+    CHECK(buttons_of(&sent[0]) == (1u << SMP_MENU));
+
+    /* a report longer than the bitmask we keep is truncated, not misread */
+    uint8_t big[64] = { 3 };
+    big[1] = 1u << V3DK_FIT;
+    big[63] = 0xff;
+    bridge_source_report(big, sizeof(big), t + 2);
+    bridge_task(t + 2);
+    CHECK(num_sent == 2);
+    CHECK(buttons_of(&sent[1]) == (1u << SMP_FIT));
+}
+
 int main(void)
 {
     test_attach();
+    test_every_spacenavd_usb_device_attaches();
+    test_fix_yz_axes();
+    test_sequential_map();
+    test_enterprise_wide_button_report();
     test_initial_zero_frames();
     test_translation_and_rotation_combined();
     test_translation_only_flushes_after_coalesce();

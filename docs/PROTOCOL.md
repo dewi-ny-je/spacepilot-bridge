@@ -19,6 +19,34 @@ The identical `DF_*` flags on both sides mean the raw axis order and sign of the
 SpacePilot (Pro) already match the SpaceMouse Pro Wireless, so the bridge maps
 axes 1:1 (`BRIDGE_AXIS_MAP` is the identity).
 
+### The other devices
+
+The bridge's table (`src/button_maps.h`) carries every USB entry of spacenavd's
+table.  Two properties are read off spacenavd per device:
+
+**Axes.**  spacenavd's `read_device()` applies `DF_SWAPYZ` (swap axes 1↔2 and
+4↔5) and `DF_INVYZ` (negate every axis except 0 and 3) to bring all devices
+to one convention; `init_devices_usb()` adds both flags to *every* 0x256f
+device, and the 0x046d table lists them for all but three: SpaceMouse Plus XT
+(`c603`), SpaceMouse Classic (`c606`) and NuLOOQ (`c640`).  Because the
+emulated SpaceMouse Pro Wireless is transformed the same way by the driver,
+the bridge must apply the transform only to those three (`BRIDGE_SRC_FIX_YZ`).
+The transform is its own inverse, so it is the same code in both directions.
+
+**Keys.**  spacenavd needs a `bnhack_*` function exactly for the devices whose
+HID button bits are sparse — the SpaceMouse Pro family (`bnhack_smpro`) and the
+Enterprise (`bnhack_sment`) — because they keep 3Dconnexion's V3DK key codes
+and leave gaps where a key is missing.  Devices without a hack report their
+keys as contiguous bits 0…n−1.  Hence two shared maps: `map_v3dk` (identity on
+the 15 SpaceMouse Pro bits, also right for the SpacePilot Pro, whose 31 keys
+fill bits 0–30 contiguously) and `map_sequential` (n-th key → n-th SpaceMouse
+Pro key) for the contiguous ones.
+
+`bnhack_sment` also reveals how wide the Enterprise's button field is: its
+evdev codes are `BTN_MISC + bit`, and the highest (`431` = Space) is bit 175.
+The bridge therefore keeps a 192-bit source bitmask (`BRIDGE_MAX_SRC_BUTTONS`)
+rather than 32.
+
 ### Interfaces
 
 The SpacePilot Pro has two USB interfaces:

@@ -41,12 +41,23 @@ typedef struct {
     uint8_t dst;
 } bridge_button_pair_t;
 
+/* Source device quirks. */
+
+/* The device's raw axis convention differs from the emulated SpaceMouse Pro
+ * Wireless and has to be normalised: swap Y with Z (and Ry with Rz), then
+ * negate Y, Z, Ry and Rz.  This is spacenavd's DF_SWAPYZ | DF_INVYZ, which it
+ * applies to every 3Dconnexion device *except* a handful of early Logitech-era
+ * ones; since the emulated device gets the transform too, only those few
+ * exceptions need it here.  The transform is its own inverse. */
+#define BRIDGE_SRC_FIX_YZ 0x01
+
 typedef struct {
     uint16_t vid;
     uint16_t pid;
     const char *name;
+    uint8_t flags;
     const bridge_button_pair_t *map;
-    size_t map_len;
+    uint8_t map_len;
 } bridge_source_desc_t;
 
 void bridge_init(void);
