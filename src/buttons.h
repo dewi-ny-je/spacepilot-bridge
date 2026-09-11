@@ -77,13 +77,11 @@
 /*
  * Source: original SpacePilot (046d:c625), 21 buttons.
  *
- * This layout predates the V3DK numbering.  It is reconstructed from
+ * This layout predates the V3DK numbering.  It was reconstructed from
  * spacenavd's doc/spnavrc_spilot (button 6 = T, 8 = R, 9 = F, 10 = Esc,
  * 11 = Alt, 12 = Shift, 13 = Ctrl, 14 = Fit, 16..18 = sensitivity keys) and
- * from the physical key order of the device.  It has NOT been verified on real
- * hardware: if a key ends up on the wrong function, set BRIDGE_DEBUG to 1,
- * press the key, read the bit number printed on the debug UART and fix the
- * table in button_maps.h.
+ * from the physical key order of the device, and has been verified on real
+ * hardware.
  */
 #define SP_1        0
 #define SP_2        1

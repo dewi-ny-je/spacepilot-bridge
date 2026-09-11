@@ -3,7 +3,7 @@
 What the bridge translates between, and where each piece of information comes
 from.  All multi-byte values are little-endian.
 
-## Source: SpacePilot Pro (046d:c629) and SpacePilot (046d:c625)
+## Source: SpacePilot (046d:c625) and SpacePilot Pro (046d:c629)
 
 USB vendor 0x046d is Logitech; 3Dconnexion used it until they got 0x256f.  The
 IDs and the axis flags below come from `src/dev.c` in
@@ -86,10 +86,12 @@ SpaceMouse Pro keeps exactly these bit positions for the keys it retains
 (`bnhack_smpro()` in spacenavd: bit 0 Menu, 1 Fit, 2 T, 4 R, 5 F, 8 roll,
 12–15 keys 1–4, 22–26 Esc/Alt/Shift/Ctrl/Rotate).
 
-The original SpacePilot predates V3DK.  Its layout in `src/buttons.h` is
+The original SpacePilot predates V3DK.  Its layout in `src/buttons.h` was
 reconstructed from spacenavd's `doc/spnavrc_spilot` (6 = T, 8 = R, 9 = F,
 10 = Esc, 11 = Alt, 12 = Shift, 13 = Ctrl, 14 = Fit, 16–18 = +/−/Dom used as
-sensitivity keys) and is unverified.
+sensitivity keys) and has been verified on hardware.  Everything said about
+the SpacePilot Pro above is derived from spacenavd and 3dxdisp-pro, not from
+a device on a desk.
 
 ### Output report (bridge → device)
 

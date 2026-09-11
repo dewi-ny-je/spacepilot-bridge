@@ -84,10 +84,10 @@ static const bridge_button_pair_t map_sequential[] = {
  *
  * Reconstructed from spacenavd's doc/spnavrc_spilot (button 6 = T, 8 = R,
  * 9 = F, 10 = Esc, 11 = Alt, 12 = Shift, 13 = Ctrl, 14 = Fit, 16..18 =
- * sensitivity keys) rather than guessed, so it gets its own table.  "Panel"
- * (opens the 3DxWare panel) goes to "Menu" (opens the radial menu) and
- * "3D lock" to "Rotation lock" as the closest equivalents.  See the note in
- * buttons.h: the numbering is still unverified on hardware.
+ * sensitivity keys) and verified on hardware - this is the device the project
+ * was written for.  "Panel" (opens the 3DxWare panel) goes to "Menu" (opens
+ * the radial menu) and "3D lock" to "Rotation lock" as the closest
+ * equivalents.
  */
 static const bridge_button_pair_t map_spacepilot[] = {
     { SP_1,      SMP_1     },

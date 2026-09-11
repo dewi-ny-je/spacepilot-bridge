@@ -1,14 +1,13 @@
 # spacepilot-bridge
 
 Firmware for a Raspberry Pi Pico (RP2040) that sits between an old 3Dconnexion
-**SpacePilot Pro** (or any other USB 6DOF device that
-[spacenavd](https://github.com/FreeSpacenav/spacenavd) knows) and a computer,
-and makes the computer see a **SpaceMouse Pro Wireless**.
+**SpacePilot** and a computer, and makes the computer see a **SpaceMouse Pro
+Wireless**.
 
 ```
- SpacePilot Pro  ──USB──▶  Raspberry Pi Pico  ──USB──▶  computer
- 046d:c629                 PIO USB host on            sees 256f:c631
-                           GPIO0/1 + native USB       "SpaceMouse Pro Wireless (cabled)"
+ SpacePilot  ──USB──▶  Raspberry Pi Pico  ──USB──▶  computer
+ 046d:c625             PIO USB host on            sees 256f:c631
+                       GPIO0/1 + native USB       "SpaceMouse Pro Wireless (cabled)"
 ```
 
 Why: 3Dconnexion dropped the SpacePilot family from 3DxWare years ago, and the
@@ -16,15 +15,17 @@ old devices also split their reports differently from current ones.  The bridge
 speaks the old protocol on one side and the current one on the other, so the
 current drivers (3DxWare on Windows/macOS, spacenavd on Linux) just work.
 
-Status: builds, and the translation core has unit tests; **not yet tested with
-real hardware** (see [Testing status](#testing-status)).
+Status: **tested and working with a SpacePilot (046d:c625)**.  The other USB
+devices from [spacenavd](https://github.com/FreeSpacenav/spacenavd)'s table are
+recognised too, but none of them has been tried — see
+[Testing status](#testing-status) if you own one.
 
 ## What it does
 
 | Feature | Notes |
 | --- | --- |
 | 6 axes | Translation (report 1) and rotation (report 2) of the old device are merged into the single 6-axis report of the SpaceMouse Pro. |
-| Buttons | Mapped through a compile-time table (`src/button_maps.h`).  The SpacePilot Pro has 31 keys, the SpaceMouse Pro has 15; keys that exist on both are mapped 1:1 by default, the rest are ignored until you map them. |
+| Buttons | Mapped through a compile-time table (`src/button_maps.h`).  The SpacePilot has 21 keys, the SpaceMouse Pro has 15; keys with a counterpart on the SpaceMouse Pro are mapped to it by default, the rest are ignored until you map them. |
 | LED | The LED output report sent by the driver is forwarded to the source device. |
 | Identity | `256f:c631` "3Dconnexion SpaceMouse Pro Wireless (cabled)", the same identity the [AndunHH/spacemouse](https://github.com/AndunHH/spacemouse) project uses successfully with 3DxWare and spacenavd. |
 | Source devices | All 21 USB devices in spacenavd's table (below).  Any other HID *multi-axis controller* is accepted with the generic V3DK button map.  Keyboards and mice plugged into the host port are ignored. |
@@ -44,11 +45,11 @@ are numbered.
 | SpaceMouse Classic | `046d:c606` | normalised | sequential |
 | Spaceball 5000 | `046d:c621` | | sequential |
 | Space Traveller | `046d:c623` | | sequential |
-| SpacePilot | `046d:c625` | | own table |
+| **SpacePilot** (tested) | `046d:c625` | | own table |
 | SpaceNavigator | `046d:c626` | | sequential |
 | SpaceExplorer | `046d:c627` | | sequential |
 | SpaceNavigator for Notebooks | `046d:c628` | | sequential |
-| **SpacePilot Pro** | `046d:c629` | | V3DK |
+| SpacePilot Pro | `046d:c629` | | V3DK |
 | SpaceMouse Pro | `046d:c62b` | | V3DK |
 | NuLOOQ | `046d:c640` | normalised | sequential |
 | SpaceMouse Wireless (cabled / receiver / BT) | `256f:c62e` `c62f` `c63a` | | sequential |
@@ -64,8 +65,9 @@ n-th SpaceMouse Pro key.  Exactly right for the two-button devices, a
 best-effort default for the rest — see `src/button_maps.h` for how this was
 derived from spacenavd and how to correct it.
 
-Only the SpacePilot Pro and SpacePilot are the project's actual targets; the
-others cost nothing but a table row, and none of them has been tried.
+Only the SpacePilot is the project's target and the only device that has been
+verified on hardware.  The others cost nothing but a table row; whether their
+axes and keys come out right depends on feedback from people who own them.
 
 ## Hardware
 
@@ -80,8 +82,8 @@ the single-Pico [HID Remapper](https://github.com/jfedor2/hid-remapper/blob/mast
 | GND (black) | GND (pin 38) |
 
 The Pico's own micro-USB port goes to the computer.  See [docs/HARDWARE.md](docs/HARDWARE.md)
-for details, the debug UART and power considerations (the SpacePilot Pro with
-its colour LCD is not a low-power device).
+for details, the debug UART and power considerations (the SpacePilot with its
+backlit LCD is not a low-power device).
 
 ## Building
 
@@ -134,24 +136,30 @@ Everything is compile time.
 
 ## Testing status
 
-The firmware compiles and the translation core (`src/bridge.c`) is covered by
-unit tests, but it has not been run against a real SpacePilot (Pro) yet.  The
-main things to confirm on hardware, in order:
+**SpacePilot (046d:c625): tested, works** — enumeration, all six axes, the
+button table and driver acceptance have been verified on real hardware.
+
+**Every other device in the table: untested.**  Their entries are derived from
+spacenavd's source code, not from a device on a desk, so they need feedback
+from actual users.  If you own one, this is what to check, in order, and what
+to report (an issue with the UART log and the device name is ideal):
 
 1. **Enumeration on the host port.**  Set `BRIDGE_DEBUG` to 1 (default) and
    watch the UART on GPIO16/17 at 115200 baud.  You should see
-   `source attached: SpacePilot Pro [046d:c629]`.
+   `source attached: <device name> [vid:pid]`.
 2. **Axes.**  With `BRIDGE_DEBUG=2` every raw report is printed.  If an axis
-   feels swapped or inverted, fix it in `BRIDGE_AXIS_MAP` / `BRIDGE_AXIS_INVERT`.
-   spacenavd applies identical axis flags to both devices, so the identity
-   mapping should be right.
-3. **Buttons.**  Pressing a key prints its raw bit number.  The SpacePilot Pro
-   numbering (V3DK) is well established; the original SpacePilot table is a
-   reconstruction and may need correcting — see the note in `src/buttons.h`.
+   feels swapped or inverted, the device's `BRIDGE_SRC_FIX_YZ` flag in
+   `src/button_maps.h` is probably wrong for it (see `docs/PROTOCOL.md` for
+   how it was chosen); `BRIDGE_AXIS_MAP` / `BRIDGE_AXIS_INVERT` in
+   `src/config.h` override it either way.
+3. **Buttons.**  Pressing a key prints its raw bit number.  For the "V3DK"
+   devices the numbering is well established; for the "sequential" ones the
+   physical key order is a guess, so expect to reorder `map_sequential` (or
+   give the device its own table).
 4. **Driver acceptance.**  3DxWare should list a "SpaceMouse Pro Wireless".
 
-The project's translation logic is deliberately decoupled from TinyUSB so that
-protocol issues can be reproduced in `test/test_bridge.c` without hardware.
+The translation logic is deliberately decoupled from TinyUSB so that anything
+you find can be reproduced in `test/test_bridge.c` without hardware.
 
 ## How it was put together
 

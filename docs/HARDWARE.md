@@ -30,8 +30,9 @@ D- is always the next GPIO.
 ## Power
 
 VBUS on pin 40 is the 5 V coming from the computer, passed straight through to
-the SpacePilot.  A SpacePilot Pro with its colour LCD and backlight draws
-noticeably more than a plain SpaceMouse; the bridge declares 100 mA in its
+the SpacePilot.  A SpacePilot with its backlit LCD (or a SpacePilot Pro with
+its colour one) draws noticeably more than a plain SpaceMouse; the bridge
+declares 100 mA in its
 configuration descriptor (like the real SpaceMouse Pro Wireless) but the actual
 draw is the sum of the Pico (~30 mA) and the SpacePilot.  A normal USB port
 tolerates this in practice; if the SpacePilot does not enumerate or resets
@@ -47,10 +48,10 @@ GND to GND).
 
 ```
 spacepilot-bridge starting
-usb_host: HID interface mounted, addr=1 instance=0 vid:pid=046d:c629 desc_len=...
-bridge: source attached: SpacePilot Pro [046d:c629]
+usb_host: HID interface mounted, addr=1 instance=0 vid:pid=046d:c625 desc_len=...
+bridge: source attached: SpacePilot [046d:c625]
 bridge: LED on
-bridge: source buttons 0x00000002: 1
+bridge: source buttons: 14
 bridge: sent buttons 0x00000002
 ```
 
