@@ -155,8 +155,27 @@ SpacePilot with its backlit LCD is not a low-power device).
 
 ## Building
 
-Prerequisites: CMake ≥ 3.13, `gcc-arm-none-eabi` (with newlib), a host C
-compiler for the tests.  The Pico SDK and Pico-PIO-USB come in as submodules.
+Prerequisites, on Debian or Ubuntu:
+
+```sh
+sudo apt install build-essential cmake \
+                 gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+```
+
+`build-essential` is needed for more than the unit tests: `picotool`, which the
+SDK compiles to produce the UF2, is a *host* program and needs a native
+toolchain.  `libstdc++-arm-none-eabi-newlib` is needed because the final link
+is a C++ link even though the firmware itself is C.  libusb is *not* needed —
+the SDK builds picotool with `PICOTOOL_NO_LIBUSB`.
+
+**Use your distribution's CMake, not the snap.**  CMake 4.x removed
+compatibility with `cmake_minimum_required` below 3.5, and picotool bundles a
+copy of nlohmann_json whose `CMakeLists.txt` still asks for `3.1...3.14`.  The
+SDK builds picotool as a separate `ExternalProject` with a fixed argument list,
+so `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` on your own configure line does not
+reach it.  CMake 3.28 is what this project is built and tested with.
+
+The Pico SDK and Pico-PIO-USB come in as submodules.
 
 ```sh
 git clone https://github.com/dewi-ny-je/spacepilot-bridge
@@ -172,7 +191,11 @@ cmake --build build
 
 An existing SDK checkout can be used instead of the submodule by setting
 `PICO_SDK_PATH` (and `PICO_PIO_USB_PATH`) in the environment.  The first build
-also compiles `picotool` from the SDK to produce the UF2.
+also compiles `picotool` from the SDK to produce the UF2, which is why it takes
+noticeably longer than later ones.
+
+If a configure fails, delete `build/` before retrying: CMake caches the failure
+and will keep reporting it even after you have installed what was missing.
 
 Flash it the usual way: hold the BOOT button while plugging the board into the
 computer (BOOTSEL on a Pico), then copy `spacepilot_bridge.uf2` onto the
